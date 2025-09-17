@@ -12,21 +12,23 @@ st.header("1. Insira seu texto")
 text_input = st.text_area("Cole o texto que você deseja analisar abaixo:", height=200,
                           placeholder="Era uma vez...")
 
-# --- 2. Campos de Configuração (dentro de um formulário) ---
+# --- 2. Campos de Configuração (Parte 1: Fora do Formulário) ---
 st.header("2. Configure sua Análise")
 
-# O st.form agrupa os campos e só envia os dados quando o botão é clicado
+# --- CORREÇÃO AQUI: Este campo agora está FORA do formulário ---
+# --- Assim, ao mudar o valor, o app recarrega e cria os campos de texto ---
+st.subheader("Quantas palavras você quer contar?")
+num_words = st.number_input(
+    "Selecione o número de palavras:",
+    min_value=1,
+    max_value=50, # Limite razoável para não poluir a UI
+    value=3,      # Valor padrão
+    step=1
+)
+
+# --- 2. Campos de Configuração (Parte 2: Dentro do Formulário) ---
+# O st.form agrupa os campos de texto e o botão de envio
 with st.form("analysis_form"):
-    
-    # --- Campo 2: Selecionar o número de palavras ---
-    st.subheader("Quantas palavras você quer contar?")
-    num_words = st.number_input(
-        "Selecione o número de palavras:",
-        min_value=1,
-        max_value=50, # Limite razoável para não poluir a UI
-        value=3,      # Valor padrão
-        step=1
-    )
     
     # --- Campo 3: Preencher com as palavras desejadas ---
     st.subheader("Quais palavras você quer contar?")
@@ -34,8 +36,7 @@ with st.form("analysis_form"):
     
     words_to_count_inputs = []
     
-    # Cria campos de texto dinamicamente baseado no num_words
-    # Usamos colunas para organizar melhor se forem muitas palavras
+    # Cria campos de texto dinamicamente baseado no num_words (que agora está correto)
     cols = st.columns(3) # Organiza os inputs em 3 colunas
     for i in range(num_words):
         with cols[i % 3]: # Distribui os inputs entre as 3 colunas
@@ -99,7 +100,6 @@ if submit_button:
             st.subheader("Gráfico de Frequência")
             
             # Prepara o DataFrame para o gráfico (Palavra como índice)
-            # Isso é necessário para o st.bar_chart saber o que colocar no eixo X
             try:
                 chart_df = df.set_index("Palavra")
                 st.bar_chart(chart_df)
