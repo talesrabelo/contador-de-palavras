@@ -4,7 +4,7 @@ import re # Para limpeza de texto (Regex)
 
 # --- Configuração da Página ---
 st.set_page_config(page_title="Contador de Palavras", page_icon="📊")
-st.title("📊 Contador de Frequência de Palavras")
+st.title("📊 Analisador de Frequência de Palavras")
 st.write("Cole um texto e descubra quantas vezes palavras específicas aparecem.")
 
 # --- 1. Campo para colocar o texto ---
@@ -15,8 +15,7 @@ text_input = st.text_area("Cole o texto que você deseja analisar abaixo:", heig
 # --- 2. Campos de Configuração (Parte 1: Fora do Formulário) ---
 st.header("2. Configure sua Análise")
 
-# --- CORREÇÃO AQUI: Este campo agora está FORA do formulário ---
-# --- Assim, ao mudar o valor, o app recarrega e cria os campos de texto ---
+# --- Este campo fica FORA do formulário ---
 st.subheader("Quantas palavras você quer contar?")
 num_words = st.number_input(
     "Selecione o número de palavras:",
@@ -36,7 +35,7 @@ with st.form("analysis_form"):
     
     words_to_count_inputs = []
     
-    # Cria campos de texto dinamicamente baseado no num_words (que agora está correto)
+    # Cria campos de texto dinamicamente baseado no num_words
     cols = st.columns(3) # Organiza os inputs em 3 colunas
     for i in range(num_words):
         with cols[i % 3]: # Distribui os inputs entre as 3 colunas
@@ -55,7 +54,6 @@ if submit_button:
         st.error("Por favor, insira um texto para analisar.")
     else:
         # Limpeza das palavras-alvo: remove espaços e converte para minúsculas
-        # Filtra strings vazias caso o usuário não preencha todos os campos
         words_to_count = [w.strip().lower() for w in words_to_count_inputs if w.strip()]
         
         # Validação 2: Verificar se as palavras-alvo foram preenchidas
@@ -68,26 +66,21 @@ if submit_button:
             clean_text = text_input.lower()
             
             # 2. Encontra todas as "palavras" (sequências de letras/números)
-            #    Isso remove pontuações como '!' ',' '.' etc.
-            #    \b = limite da palavra, \w+ = um ou mais caracteres de palavra
             all_words_in_text = re.findall(r'\b\w+\b', clean_text)
             
             # 3. Contagem
             results = {}
             for word in words_to_count:
-                # Conta as ocorrências da palavra (já em minúsculo) na lista de palavras
                 count = all_words_in_text.count(word)
                 results[word] = count
             
             # --- Fim do Processamento ---
             
-            # Cria um DataFrame (tabela) do Pandas com os resultados
             df = pd.DataFrame(
                 list(results.items()),
                 columns=["Palavra", "Frequência"]
             )
             
-            # Ordena o DataFrame da mais frequente para a menos frequente
             df = df.sort_values(by="Frequência", ascending=False).reset_index(drop=True)
             
             st.header("Resultados da Análise")
@@ -99,9 +92,19 @@ if submit_button:
             # --- Saída 2: Gráfico de Barras ---
             st.subheader("Gráfico de Frequência")
             
-            # Prepara o DataFrame para o gráfico (Palavra como índice)
             try:
                 chart_df = df.set_index("Palavra")
                 st.bar_chart(chart_df)
             except Exception as e:
                 st.error(f"Não foi possível gerar o gráfico: {e}")
+
+# --- 4. RODAPÉ DE CRÉDITOS ---
+# (Isto é novo)
+# Adiciona uma linha divisória
+st.divider() 
+
+# Usa st.markdown para formatar o texto e o link
+st.markdown("""
+Elaborado por Tales Rabelo Freitas  
+LinkedIn: [https://www.linkedin.com/in/tales-rabelo-freitas-1a1466187/](https://www.linkedin.com/in/tales-rabelo-freitas-1a1466187/)
+""")
