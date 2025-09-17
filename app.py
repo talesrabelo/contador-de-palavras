@@ -5,7 +5,7 @@ import plotly.express as px # Importando o Plotly
 
 # --- Configuração da Página ---
 st.set_page_config(page_title="Contador de Palavras", page_icon="📊")
-st.title("📊 Analisador de Frequência de Palavras")
+st.title("📊 Contador de Frequência de Palavras")
 st.write("Cole um texto e descubra quantas vezes palavras específicas aparecem.")
 
 # Inicializa o 'session_state' para guardar os resultados
