@@ -95,12 +95,15 @@ if st.session_state.df_results is not None:
     # --- Saída 1: Tabela de Frequência ---
     st.subheader("Tabela de Frequência")
     
-    # --- MODIFICAÇÃO AQUI ---
-    # Aplica o estilo CSS para centralizar todo o texto na tabela
-    df_styled = df.style.set_properties(**{'text-align': 'center'}).set_table_styles(
-        [{'selector': 'th', 'props': [('text-align', 'center')]}]
-    )
-    st.dataframe(df_styled, use_container_width=True)
+    # --- MODIFICAÇÃO AQUI (v2) ---
+    # Aplica o estilo CSS de forma mais explícita para cabeçalhos (th) e células (td)
+    df_styled = df.style.set_table_styles([
+        {'selector': 'th', 'props': [('text-align', 'center')]},
+        {'selector': 'td', 'props': [('text-align', 'center')]}
+    ])
+    
+    # Adiciona hide_index=True para remover a coluna de índice (0, 1, 2, 3)
+    st.dataframe(df_styled, use_container_width=True, hide_index=True)
     # --- FIM DA MODIFICAÇÃO ---
     
     # --- Saída 2: Gráfico de Frequência ---
