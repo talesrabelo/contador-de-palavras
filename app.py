@@ -1,75 +1,107 @@
 import streamlit as st
-import random
-
-# Função para inicializar ou reiniciar o jogo
-# Usamos o st.session_state para manter as variáveis entre as execuções
-def initialize_game():
-    st.session_state.secret_number = random.randint(1, 100)
-    st.session_state.attempts = 0
-    st.session_state.max_attempts = 10
-    st.session_state.game_over = False
-    st.session_state.message_history = [] # Para guardar o histórico de palpites
+import pandas as pd
+import re # Para limpeza de texto (Regex)
 
 # --- Configuração da Página ---
-st.set_page_config(page_title="Adivinhe o Número", page_icon="🎲")
-st.title("🎲 Adivinhe o Número 🎲")
+st.set_page_config(page_title="Contador de Palavras", page_icon="📊")
+st.title("📊 Analisador de Frequência de Palavras")
+st.write("Cole um texto e descubra quantas vezes palavras específicas aparecem.")
 
-# Inicializa o jogo na primeira execução ou se 'secret_number' não estiver no estado
-if 'secret_number' not in st.session_state:
-    initialize_game()
+# --- 1. Campo para colocar o texto ---
+st.header("1. Insira seu texto")
+text_input = st.text_area("Cole o texto que você deseja analisar abaixo:", height=200,
+                          placeholder="Era uma vez...")
 
-# --- Interface do Jogo ---
+# --- 2. Campos de Configuração (dentro de um formulário) ---
+st.header("2. Configure sua Análise")
 
-# Se o jogo acabou (ganhou ou perdeu), mostra o botão de reiniciar
-if st.session_state.game_over:
-    st.write("---")
-    # O botão "Jogar Novamente" chama a função de inicialização
-    if st.button("Jogar Novamente"):
-        initialize_game()
-        # st.rerun() força o script a rodar novamente com o estado limpo
-        st.rerun()
-
-# Se o jogo está em andamento
-else:
-    remaining_attempts = st.session_state.max_attempts - st.session_state.attempts
-    st.write(f"Eu pensei em um número entre 1 e 100.")
-    st.write(f"Você tem **{remaining_attempts}** tentativas restantes.")
+# O st.form agrupa os campos e só envia os dados quando o botão é clicado
+with st.form("analysis_form"):
     
-    with st.form("guess_form", clear_on_submit=True):
-        guess = st.number_input("Qual é o seu palpite?", min_value=1, max_value=100, step=1, key="guess_input")
-        submit_button = st.form_submit_button("Adivinhar")
-
-    if submit_button:
-        st.session_state.attempts += 1
-        message = "" 
-
-        if guess < st.session_state.secret_number:
-            message = f"Palpite {guess}: ⬆️ Muito baixo!"
-        elif guess > st.session_state.secret_number:
-            message = f"Palpite {guess}: ⬇️ Muito alto!"
-        else:
-            message = f"🎉 Parabéns! Você adivinhou o número {st.session_state.secret_number} em {st.session_state.attempts} tentativas."
-            st.session_state.game_over = True
-            st.balloons() 
-        
-        st.session_state.message_history.append(message)
-
-        if st.session_state.attempts >= st.session_state.max_attempts and not st.session_state.game_over:
-            message = f"Fim de jogo! Você usou todas as {st.session_state.max_attempts} tentativas. O número era {st.session_state.secret_number}."
-            st.session_state.message_history.append(message)
-            st.session_state.game_over = True
-        
-        st.rerun()
-
-# --- Exibição do Histórico ---
-if st.session_state.message_history:
-    st.write("---")
-    st.subheader("Histórico de Palpites")
+    # --- Campo 2: Selecionar o número de palavras ---
+    st.subheader("Quantas palavras você quer contar?")
+    num_words = st.number_input(
+        "Selecione o número de palavras:",
+        min_value=1,
+        max_value=50, # Limite razoável para não poluir a UI
+        value=3,      # Valor padrão
+        step=1
+    )
     
-    for msg in reversed(st.session_state.message_history):
-        if "Parabéns" in msg:
-            st.success(msg)
-        elif "Fim de jogo" in msg:
-            st.error(msg)
+    # --- Campo 3: Preencher com as palavras desejadas ---
+    st.subheader("Quais palavras você quer contar?")
+    st.caption("A contagem ignora maiúsculas/minúsculas e pontuação (ex: 'Casa' conta 'casa!' e 'casa.').")
+    
+    words_to_count_inputs = []
+    
+    # Cria campos de texto dinamicamente baseado no num_words
+    # Usamos colunas para organizar melhor se forem muitas palavras
+    cols = st.columns(3) # Organiza os inputs em 3 colunas
+    for i in range(num_words):
+        with cols[i % 3]: # Distribui os inputs entre as 3 colunas
+            word = st.text_input(f"Palavra {i+1}", key=f"word_{i}")
+            words_to_count_inputs.append(word)
+    
+    # Botão de envio do formulário
+    submit_button = st.form_submit_button("Analisar Frequência")
+
+# --- 3. Processamento e Exibição dos Resultados ---
+# Esta parte só executa se o botão "Analisar" for pressionado
+if submit_button:
+    
+    # Validação 1: Verificar se o texto foi inserido
+    if not text_input:
+        st.error("Por favor, insira um texto para analisar.")
+    else:
+        # Limpeza das palavras-alvo: remove espaços e converte para minúsculas
+        # Filtra strings vazias caso o usuário não preencha todos os campos
+        words_to_count = [w.strip().lower() for w in words_to_count_inputs if w.strip()]
+        
+        # Validação 2: Verificar se as palavras-alvo foram preenchidas
+        if not words_to_count:
+            st.error("Por favor, preencha as palavras que deseja contar.")
         else:
-            st.info(msg)
+            # --- Início do Processamento do Texto ---
+            
+            # 1. Converte o texto principal para minúsculas
+            clean_text = text_input.lower()
+            
+            # 2. Encontra todas as "palavras" (sequências de letras/números)
+            #    Isso remove pontuações como '!' ',' '.' etc.
+            #    \b = limite da palavra, \w+ = um ou mais caracteres de palavra
+            all_words_in_text = re.findall(r'\b\w+\b', clean_text)
+            
+            # 3. Contagem
+            results = {}
+            for word in words_to_count:
+                # Conta as ocorrências da palavra (já em minúsculo) na lista de palavras
+                count = all_words_in_text.count(word)
+                results[word] = count
+            
+            # --- Fim do Processamento ---
+            
+            # Cria um DataFrame (tabela) do Pandas com os resultados
+            df = pd.DataFrame(
+                list(results.items()),
+                columns=["Palavra", "Frequência"]
+            )
+            
+            # Ordena o DataFrame da mais frequente para a menos frequente
+            df = df.sort_values(by="Frequência", ascending=False).reset_index(drop=True)
+            
+            st.header("Resultados da Análise")
+            
+            # --- Saída 1: Tabela de Frequência ---
+            st.subheader("Tabela de Frequência")
+            st.dataframe(df, use_container_width=True)
+            
+            # --- Saída 2: Gráfico de Barras ---
+            st.subheader("Gráfico de Frequência")
+            
+            # Prepara o DataFrame para o gráfico (Palavra como índice)
+            # Isso é necessário para o st.bar_chart saber o que colocar no eixo X
+            try:
+                chart_df = df.set_index("Palavra")
+                st.bar_chart(chart_df)
+            except Exception as e:
+                st.error(f"Não foi possível gerar o gráfico: {e}")
