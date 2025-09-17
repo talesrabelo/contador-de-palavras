@@ -45,25 +45,23 @@ with st.form("analysis_form"):
     cols = st.columns(3) 
     for i in range(num_words):
         with cols[i % 3]: 
-            # on_change não funciona bem dentro de st.form, por isso o botão é essencial
             word = st.text_input(f"Palavra {i+1}", key=f"word_{i}")
             words_to_count_inputs.append(word)
     
     submit_button = st.form_submit_button("Analisar Frequência")
 
 # --- 3. Processamento ---
-# Esta parte só executa se o botão "Analisar" for pressionado
 if submit_button:
     
     if not text_input:
         st.error("Por favor, insira um texto para analisar.")
-        st.session_state.df_results = None # Limpa em caso de erro
+        st.session_state.df_results = None 
     else:
         words_to_count = [w.strip().lower() for w in words_to_count_inputs if w.strip()]
         
         if not words_to_count:
             st.error("Por favor, preencha as palavras que deseja contar.")
-            st.session_state.df_results = None # Limpa em caso de erro
+            st.session_state.df_results = None 
         else:
             clean_text = text_input.lower()
             all_words_in_text = re.findall(r'\b\w+\b', clean_text)
@@ -84,27 +82,30 @@ if submit_button:
                 df = df[df["Frequência"] > 0] 
                 df = df.sort_values(by="Frequência", ascending=False).reset_index(drop=True)
                 
-                # --- CORREÇÃO: Salva o DataFrame no session_state ---
                 st.session_state.df_results = df.copy()
 
 
 # --- 4. Exibição dos Resultados ---
-# Esta seção agora é independente do botão de submit
-# Ela roda se houver resultados guardados no session_state
 if st.session_state.df_results is not None:
     
-    df = st.session_state.df_results # Puxa o DataFrame guardado
+    df = st.session_state.df_results 
     
     st.header("Resultados da Análise")
     
     # --- Saída 1: Tabela de Frequência ---
     st.subheader("Tabela de Frequência")
-    st.dataframe(df, use_container_width=True)
+    
+    # --- MODIFICAÇÃO AQUI ---
+    # Aplica o estilo CSS para centralizar todo o texto na tabela
+    df_styled = df.style.set_properties(**{'text-align': 'center'}).set_table_styles(
+        [{'selector': 'th', 'props': [('text-align', 'center')]}]
+    )
+    st.dataframe(df_styled, use_container_width=True)
+    # --- FIM DA MODIFICAÇÃO ---
     
     # --- Saída 2: Gráfico de Frequência ---
     st.subheader("Gráfico de Frequência")
     
-    # --- ATUALIZADO: Lista completa de gráficos ---
     chart_type = st.selectbox(
         "Selecione o tipo de gráfico:",
         [
@@ -119,10 +120,9 @@ if st.session_state.df_results is not None:
         ]
     )
 
-    fig = None # Inicializa a figura
+    fig = None 
 
     try:
-        # --- Lógica para desenhar o gráfico selecionado ---
         if chart_type == "Barras (Vertical)":
             fig = px.bar(df, x="Palavra", y="Frequência", title="Frequência de Palavras",
                          color="Palavra", text_auto=True)
@@ -133,7 +133,6 @@ if st.session_state.df_results is not None:
                          color="Palavra", text_auto=True)
 
         elif chart_type == "Barras Empilhadas (Vertical)":
-            # Para empilhar, criamos uma coluna "eixo" para agrupar todas em uma barra
             df_stack = df.copy()
             df_stack['Eixo'] = 'Frequência Total'
             fig = px.bar(df_stack, x='Eixo', y='Frequência', color='Palavra', 
@@ -162,11 +161,9 @@ if st.session_state.df_results is not None:
             fig.update_traces(textinfo="label+value+percent root")
         
         elif chart_type == "Funil":
-            # O gráfico de funil ordena do maior para o menor
             fig = px.funnel(df, x='Frequência', y='Palavra', 
                             title='Gráfico de Funil', color='Palavra')
 
-        # Exibe a figura do Plotly no Streamlit
         if fig:
             st.plotly_chart(fig, use_container_width=True)
             
